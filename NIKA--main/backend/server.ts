@@ -812,6 +812,51 @@ process.on('unhandledRejection', (reason, promise) => {
   }
   // Don't exit, keep running
 });
+
+// Simple QA endpoint without auth for testing
+app.post('/api/qa', async (req: express.Request, res: express.Response): Promise<void> => {
+  try {
+    const { query, datasetData } = req.body || {};
+    
+    if (!query || typeof query !== 'string') {
+      res.status(400).json({ error: 'Query is required' });
+      return;
+    }
+
+    let summary = 'No dataset provided';
+    let columns: string[] = [];
+    let sampleRows: any[] = [];
+
+    if (datasetData && datasetData.data && datasetData.columns) {
+      columns = datasetData.columns;
+      sampleRows = datasetData.data.slice(0, 5);
+      summary = `Dataset with ${datasetData.data.length} rows and ${columns.length} columns`;
+    }
+
+    const result = await generateGeminiAnswer({
+      query,
+      context: { summary, columns, sampleRows },
+      config: { timeoutMs: 15000, modelName: 'gemini-pro' }
+    });
+
+    res.json({
+      id: `q-${Date.now()}`,
+      answer: result.answer,
+      explanation: result.explanation,
+      calculations: result.calculations || [],
+      sources: result.sources || [],
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ QA Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to process query',
+      answer: 'I apologize, I cannot process your query at this moment.',
+      explanation: 'The AI service encountered an issue. Please try again.'
+    });
+  }
+});
+
 app.post('/api/ai-insights/search', verifyFirebaseToken, rateLimiter(), async (req: express.Request, res: express.Response): Promise<void> => {
   const start = Date.now();
   metrics.total += 1;

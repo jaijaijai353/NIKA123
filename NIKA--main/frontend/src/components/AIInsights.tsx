@@ -803,24 +803,39 @@ const AIInsights: React.FC = () => {
         payload.datasetId = ctx.dataset.id;
       }
       
-      const token = isFirebaseConfigured && auth && auth.currentUser ? await auth.currentUser.getIdToken() : null;
-      const r = await fetch(`${API_BASE}/api/ai-insights/search`, {
+      // Try the simple QA endpoint first (no auth required)
+      const r = await fetch(`${API_BASE}/qa`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(payload),
       });
-      if (!r.ok) {
-        const msg = `Error ${r.status}`;
-        setAiError(msg);
-        setAiLoading(false);
-        return;
+
+      let data;
+      if (r.ok) {
+        data = await r.json();
+      } else {
+        // Fallback to the original endpoint if simple one fails
+        const token = isFirebaseConfigured && auth && auth.currentUser ? await auth.currentUser.getIdToken() : null;
+        const r2 = await fetch(`${API_BASE}/api/ai-insights/search`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(payload),
+        });
+        if (!r2.ok) {
+          throw new Error(`HTTP ${r2.status}: ${r2.statusText}`);
+        }
+        data = await r2.json();
       }
-      const j = await r.json();
-      setAiResult(j);
+      
+      setAiResult(data);
       setAiLoading(false);
+      
+      // Try to fetch history
       try {
         if (isFirebaseConfigured && auth && auth.currentUser) {
           const token2 = await auth.currentUser.getIdToken();
@@ -828,11 +843,12 @@ const AIInsights: React.FC = () => {
           if (rh.ok) setHistory(await rh.json());
         }
       } catch {}
+      
     } catch (e: any) {
       setAiError(e?.message || "Request failed");
       setAiLoading(false);
     }
-  }, [query, ctx?.dataset?.id]);
+  }, [query, ctx, API_BASE, isFirebaseConfigured, auth]);
 
   /* UI helpers */
   const getIcon = (type: InsightType) => {
