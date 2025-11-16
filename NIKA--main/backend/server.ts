@@ -775,6 +775,11 @@ console.log('📍 Server setup complete');
 
 export { app };
 
+// Vercel serverless function handler
+export default function handler(req: any, res: any) {
+  return app(req, res);
+}
+
 // Graceful shutdown
 const gracefulShutdown = () => {
   console.log('\n🛑 Shutting down server...');
@@ -813,13 +818,36 @@ process.on('unhandledRejection', (reason, promise) => {
   // Don't exit, keep running
 });
 
-// Simple QA endpoint without auth for testing
+// Simple test endpoint
+app.get('/api/test', (req: express.Request, res: express.Response): void => {
+  res.json({ 
+    message: 'Backend is working!',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 app.post('/api/qa', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const { query, datasetData } = req.body || {};
     
     if (!query || typeof query !== 'string') {
       res.status(400).json({ error: 'Query is required' });
+      return;
+    }
+
+    // Check if Gemini API key is available
+    if (!process.env.GEMINI_API_KEY) {
+      console.warn('⚠️ GEMINI_API_KEY not found in environment variables');
+      res.json({
+        id: `q-${Date.now()}`,
+        answer: 'I apologize, but the AI service is not properly configured. Please ensure the GEMINI_API_KEY environment variable is set in your Vercel deployment.',
+        explanation: 'The AI service requires a valid Gemini API key to function. This should be configured in your Vercel environment variables.',
+        calculations: [],
+        sources: [],
+        timestamp: new Date().toISOString(),
+        error: 'API_KEY_MISSING'
+      });
       return;
     }
 
@@ -852,7 +880,10 @@ app.post('/api/qa', async (req: express.Request, res: express.Response): Promise
     res.status(500).json({ 
       error: 'Failed to process query',
       answer: 'I apologize, I cannot process your query at this moment.',
-      explanation: 'The AI service encountered an issue. Please try again.'
+      explanation: 'The AI service encountered an issue. Please try again.',
+      calculations: [],
+      sources: [],
+      timestamp: new Date().toISOString()
     });
   }
 });
