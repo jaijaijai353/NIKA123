@@ -788,10 +788,16 @@ const AIInsights: React.FC = () => {
 
   const runSearch = useCallback(async () => {
     try {
+      // Validate query
+      if (!query || query.trim().length === 0) {
+        setAiError('Please enter a question before asking AI');
+        return;
+      }
+      
       setAiError(null);
       setAiLoading(true);
       setAiResult(null);
-      const payload: any = { query };
+      const payload: any = { query: query.trim() };
       
       // Send dataset data directly if available (for client-side processed datasets)
       if (ctx?.dataset?.data) {
@@ -804,7 +810,10 @@ const AIInsights: React.FC = () => {
       }
       
       // Try the simple QA endpoint first (no auth required)
-      const r = await fetch(`${API_BASE}/qa`, {
+      console.log('🔍 AI Debug - Making request to:', `${API_BASE}/api/qa`);
+      console.log('🔍 AI Debug - Payload:', JSON.stringify(payload, null, 2));
+      
+      const r = await fetch(`${API_BASE}/api/qa`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -815,7 +824,13 @@ const AIInsights: React.FC = () => {
       let data;
       if (r.ok) {
         data = await r.json();
+        console.log('✅ AI Debug - Response received:', data);
       } else {
+        console.error('❌ AI Debug - Request failed:', {
+          status: r.status,
+          statusText: r.statusText,
+          url: `${API_BASE}/api/qa`
+        });
         // Fallback to the original endpoint if simple one fails
         const token = isFirebaseConfigured && auth && auth.currentUser ? await auth.currentUser.getIdToken() : null;
         const r2 = await fetch(`${API_BASE}/api/ai-insights/search`, {
