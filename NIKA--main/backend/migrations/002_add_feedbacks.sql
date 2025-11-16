@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS feedbacks (
+  id TEXT PRIMARY KEY,
+  queryId TEXT NOT NULL,
+  userId TEXT,
+  rating INTEGER,
+  comment TEXT,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+);

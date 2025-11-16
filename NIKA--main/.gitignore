@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+
+# Firebase service account keys (NEVER commit these!)
+**/firebaseServiceAccount.json
+**/*firebase*service*account*.json
+
+# Firebase emulator data
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

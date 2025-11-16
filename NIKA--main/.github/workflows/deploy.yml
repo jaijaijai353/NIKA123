@@ -1,0 +1,29 @@
+name: Deploy to Firebase and Google Cloud
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+
+      - name: Build and deploy frontend
+        run: |
+          npm install
+          npm run build
+          firebase deploy --only hosting --token $FIREBASE_TOKEN
+
+      - name: Build and deploy backend
+        run: |
+          gcloud builds submit --tag gcr.io/$GCP_PROJECT_ID/nika-dashboard:latest .
+          gcloud run deploy nika-dashboard --image gcr.io/$GCP_PROJECT_ID/nika-dashboard:latest --platform managed --region us-central1 --allow-unauthenticated
