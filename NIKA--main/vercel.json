@@ -15,15 +15,16 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "backend/server.ts"
+      "dest": "/backend/server.ts"
     },
     {
       "src": "/(.*)",
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/frontend/$1"
     }
-  ]
+  ],
+  "functions": {
+    "backend/server.ts": {
+      "maxDuration": 30
+    }
+  }
 }
